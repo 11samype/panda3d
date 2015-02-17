@@ -4,7 +4,7 @@ from panda3d.core import CollisionHandlerQueue,CollisionRay
 from panda3d.core import Filename,AmbientLight,DirectionalLight
 from panda3d.core import PandaNode,NodePath,Camera,TextNode
 from panda3d.core import Vec3,Vec4,BitMask32,GeomNode, Fog
-from panda3d.core import TransparencyAttrib
+from panda3d.core import TransparencyAttrib, TextureStage, TexGenAttrib
 from direct.gui.OnscreenText import OnscreenText
 from direct.actor.Actor import Actor
 from direct.particles.ParticleEffect import ParticleEffect
@@ -31,6 +31,20 @@ class World(DirectObject):
     
     
     def __init__(self):
+        # Sky Box
+        starTexture = loader.loadTexture("models/stars.jpg")
+        self.sky = loader.loadModel("models/box.egg")
+        self.sky.setScale(200)
+        self.sky.setPos(-150,-100,0)
+        self.sky.setBin('background', 0)
+        self.sky.setDepthWrite(0)
+        self.sky.setTwoSided(True)
+        # self.sky.setTexGen(TextureStage.getDefault(),TexGenAttrib.MWorldCubeMap)
+        self.sky.setTexture(starTexture, 1)
+        
+        self.sky.reparentTo(render)
+        self.sky.set_compass()
+    
         # allow transparency
         render.setTransparency(TransparencyAttrib.MAlpha)
 
@@ -185,7 +199,7 @@ class World(DirectObject):
         self.isWalking = False
 
         # Set up the camera
-        base.disableMouse()
+        # base.disableMouse()
         base.camera.setPos(self.eve.getX(),self.eve.getY()+10,2)
         
         # Collision detection for eve against the ground and against objects
