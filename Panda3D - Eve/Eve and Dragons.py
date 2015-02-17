@@ -39,14 +39,17 @@ class World(DirectObject):
         
         self.collectSoundEffect = loader.loadMusic("sounds/item_collect.mp3")
         
+        self.footstepSound = loader.loadMusic("sounds/footsteps.mp3")
+        self.footstepSound.setLoop(1);
+        
         audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0], base.camera)
         
     
         # Sky Box
         starTexture = loader.loadTexture("models/stars.jpg")
         self.sky = loader.loadModel("models/box.egg")
-        self.sky.setScale(200)
-        self.sky.setPos(-150,-100,0)
+        self.sky.setScale(300)
+        self.sky.setPos(-200,-150,0)
         self.sky.setBin('background', 0)
         self.sky.setDepthWrite(0)
         self.sky.setTwoSided(True)
@@ -427,27 +430,37 @@ class World(DirectObject):
                     self.isMoving = True
                     self.isRunning = True
                     self.isWalking = False
+                    self.footstepSound.setPlayRate(1.3)
+                    self.footstepSound.play()
+
                 else:
                     self.eve.loop("walk")
                     self.eve.setPlayRate(2.0, "walk")
                     self.isMoving = True
                     self.isWalking = True
                     self.isRunning = False
+                    self.footstepSound.setPlayRate(1.0)
+                    self.footstepSound.play()
             else:
                 if (self.keyMap["run"] != 0 and self.isWalking):
                     self.eve.loop("run" )
                     self.isRunning = True
                     self.isWalking = False
+                    self.footstepSound.setPlayRate(1.3)
+
                 elif (self.keyMap["run"] == 0 and self.isRunning):
                     self.eve.loop("walk")
                     self.eve.setPlayRate(2.0, "walk")
                     self.isWalking = True
                     self.isRunning = False
+                    self.footstepSound.setPlayRate(1.0)
+                    
         else:
             if self.isMoving:
                 self.eve.stop()
                 self.eve.pose("walk",10)
                 self.isMoving = False
+                self.footstepSound.stop()
 
         # If the camera is too far from eve, move it closer.
         # If the camera is too close to eve, move it farther.
