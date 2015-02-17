@@ -4,11 +4,12 @@ from panda3d.core import CollisionHandlerQueue,CollisionRay
 from panda3d.core import Filename,AmbientLight,DirectionalLight
 from panda3d.core import PandaNode,NodePath,Camera,TextNode
 from panda3d.core import Vec3,Vec4,BitMask32,GeomNode, Fog
-from panda3d.core import TransparencyAttrib, TextureStage, TexGenAttrib
+from panda3d.core import TransparencyAttrib
 from direct.gui.OnscreenText import OnscreenText
 from direct.actor.Actor import Actor
 from direct.particles.ParticleEffect import ParticleEffect
 from direct.showbase.DirectObject import DirectObject
+from direct.showbase import Audio3DManager
 from panda3d.ai import *
 import random, sys, os, math, time
 
@@ -31,6 +32,16 @@ class World(DirectObject):
     
     
     def __init__(self):
+        # Sound
+        # music = loader.loadMusic("sounds/Enchanted-Woods.mp3")
+        # music.setLoop(1)
+        # music.play()
+        
+        self.collectSoundEffect = loader.loadMusic("sounds/item_collect.mp3")
+        
+        audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0], base.camera)
+        
+    
         # Sky Box
         starTexture = loader.loadTexture("models/stars.jpg")
         self.sky = loader.loadModel("models/box.egg")
@@ -39,7 +50,6 @@ class World(DirectObject):
         self.sky.setBin('background', 0)
         self.sky.setDepthWrite(0)
         self.sky.setTwoSided(True)
-        # self.sky.setTexGen(TextureStage.getDefault(),TexGenAttrib.MWorldCubeMap)
         self.sky.setTexture(starTexture, 1)
         
         self.sky.reparentTo(render)
@@ -105,6 +115,11 @@ class World(DirectObject):
         self.character3.setColorScale(9,9,9,.3)
         self.character3.setPos(-114,11,1.9)
         
+        blueDragonSound = audio3d.loadSfx("sounds/Snoring Giant.mp3")
+        audio3d.attachSoundToObject(blueDragonSound, self.character3)
+        blueDragonSound.setLoop(True)
+        blueDragonSound.play()
+        
         # Red Dragon
         self.character2=Actor()
         self.character2.loadModel('models/nik-dragon')
@@ -119,6 +134,11 @@ class World(DirectObject):
         self.redDragonStartPos = self.character2.getPos()
         self.redDragonCollideCount = 0
         
+        redDragonSound = audio3d.loadSfx("sounds/Velociraptor Call.mp3")
+        audio3d.attachSoundToObject(redDragonSound, self.character3)
+        redDragonSound.setLoop(True)
+        redDragonSound.play()
+        
         # Green Dragon
         self.character=Actor()
         self.character.loadModel('models/nik-dragon')
@@ -127,6 +147,11 @@ class World(DirectObject):
         self.character.loop('win')
         self.character.setScale(.1)
         self.character.setPos(-118,21,0)
+        
+        greenDragonSound = audio3d.loadSfx("sounds/Raptor Call.mp3")
+        audio3d.attachSoundToObject(greenDragonSound, self.character3)
+        greenDragonSound.setLoop(True)
+        greenDragonSound.play()
         
         self.dragonStartPos = self.character.getPos()
         self.dragonCollideCount = 0
@@ -199,7 +224,7 @@ class World(DirectObject):
         self.isWalking = False
 
         # Set up the camera
-        # base.disableMouse()
+        base.disableMouse()
         base.camera.setPos(self.eve.getX(),self.eve.getY()+10,2)
         
         # Collision detection for eve against the ground and against objects
@@ -334,6 +359,9 @@ class World(DirectObject):
             
             self.p.start(parent = self.copyPie, renderParent = render)
             taskMgr.add(self.timedParticle, "timedParticle")
+            
+            # play collect sounds
+            self.collectSoundEffect.play()
             
             # collect pie
             try:
