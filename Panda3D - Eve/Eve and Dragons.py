@@ -4,9 +4,12 @@ from panda3d.core import CollisionHandlerQueue,CollisionRay
 from panda3d.core import Filename,AmbientLight,DirectionalLight
 from panda3d.core import PandaNode,NodePath,Camera,TextNode
 from panda3d.core import Vec3,Vec4,BitMask32,GeomNode, Fog
+from panda3d.core import TransparencyAttrib
 from direct.gui.OnscreenText import OnscreenText
 from direct.actor.Actor import Actor
+from direct.particles.ParticleEffect import ParticleEffect
 from direct.showbase.DirectObject import DirectObject
+from direct.showbase import Audio3DManager
 from panda3d.ai import *
 import random, sys, os, math, time
 
@@ -27,7 +30,37 @@ class World(DirectObject):
         # Set everything back to its starting position and remove the game over message
         return 0
     
+    
     def __init__(self):
+        # Sound
+        # music = loader.loadMusic("sounds/Enchanted-Woods.mp3")
+        # music.setLoop(1)
+        # music.play()
+        
+        self.collectSoundEffect = loader.loadMusic("sounds/item_collect.mp3")
+        
+        self.footstepSound = loader.loadMusic("sounds/footsteps.mp3")
+        self.footstepSound.setLoop(1);
+        
+        audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0], base.camera)
+        
+    
+        # Sky Box
+        starTexture = loader.loadTexture("models/stars.jpg")
+        self.sky = loader.loadModel("models/box.egg")
+        self.sky.setScale(300)
+        self.sky.setPos(-200,-150,0)
+        self.sky.setBin('background', 0)
+        self.sky.setDepthWrite(0)
+        self.sky.setTwoSided(True)
+        self.sky.setTexture(starTexture, 1)
+        
+        self.sky.reparentTo(render)
+        self.sky.set_compass()
+    
+        # allow transparency
+        render.setTransparency(TransparencyAttrib.MAlpha)
+
         self.pieCount = 0
         self.pieDisplay = grabPie(self.pieCount)
         self.keyMap = {"left":0, "right":0, "forward":0, "cam-left":0, "cam-right":0, "run":0}
@@ -85,6 +118,11 @@ class World(DirectObject):
         self.character3.setColorScale(9,9,9,.3)
         self.character3.setPos(-114,11,1.9)
         
+        blueDragonSound = audio3d.loadSfx("sounds/Snoring Giant.mp3")
+        audio3d.attachSoundToObject(blueDragonSound, self.character3)
+        blueDragonSound.setLoop(True)
+        blueDragonSound.play()
+        
         # Red Dragon
         self.character2=Actor()
         self.character2.loadModel('models/nik-dragon')
@@ -99,6 +137,11 @@ class World(DirectObject):
         self.redDragonStartPos = self.character2.getPos()
         self.redDragonCollideCount = 0
         
+        redDragonSound = audio3d.loadSfx("sounds/Velociraptor Call.mp3")
+        audio3d.attachSoundToObject(redDragonSound, self.character3)
+        redDragonSound.setLoop(True)
+        redDragonSound.play()
+        
         # Green Dragon
         self.character=Actor()
         self.character.loadModel('models/nik-dragon')
@@ -107,6 +150,11 @@ class World(DirectObject):
         self.character.loop('win')
         self.character.setScale(.1)
         self.character.setPos(-118,21,0)
+        
+        greenDragonSound = audio3d.loadSfx("sounds/Raptor Call.mp3")
+        audio3d.attachSoundToObject(greenDragonSound, self.character3)
+        greenDragonSound.setLoop(True)
+        greenDragonSound.play()
         
         self.dragonStartPos = self.character.getPos()
         self.dragonCollideCount = 0
@@ -152,6 +200,9 @@ class World(DirectObject):
         # Create a floater object to use for camera management
         self.floater = NodePath(PandaNode("floater"))
         self.floater.reparentTo(render)
+        
+        # Enable Particles
+        base.enableParticles()
 
         # Accept the control keys for movement and rotation
         self.accept("escape", sys.exit)
@@ -304,7 +355,20 @@ class World(DirectObject):
     def move(self, task):
 
         if math.sqrt((self.eve.getX() - self.pie.getX())**2 + (self.eve.getY() - self.pie.getY())**2) < .6:
-            #collect pie
+            # particle effect
+            self.p = ParticleEffect()
+            self.p.loadConfig("models/sparkleparticlerenderer.ptf")
+            
+            self.copyPie = self.pie.copyTo(render)
+            self.copyPie.setColor(0.0, 0.0, 0.0, 0.0)
+            
+            self.p.start(parent = self.copyPie, renderParent = render)
+            taskMgr.add(self.timedParticle, "timedParticle")
+            
+            # play collect sounds
+            self.collectSoundEffect.play()
+            
+            # collect pie
             try:
                 self.pie.setPos(Vec3(random.randrange(-120,-19), random.randrange(-60,51), 10))
                 while self.fixPieZ():
@@ -315,6 +379,7 @@ class World(DirectObject):
             self.pieDisplay.clearText()
             self.pieCount = self.pieCount + 1
             self.pieDisplay = grabPie(self.pieCount)
+            
             
         if math.sqrt((self.eve.getX() - self.character.getX())**2 + (self.eve.getY() - self.character.getY())**2) < 1 and self.gameOver == 0:
             self.caught = displayGameOver()
@@ -367,27 +432,37 @@ class World(DirectObject):
                     self.isMoving = True
                     self.isRunning = True
                     self.isWalking = False
+                    self.footstepSound.setPlayRate(1.3)
+                    self.footstepSound.play()
+
                 else:
                     self.eve.loop("walk")
                     self.eve.setPlayRate(2.0, "walk")
                     self.isMoving = True
                     self.isWalking = True
                     self.isRunning = False
+                    self.footstepSound.setPlayRate(1.0)
+                    self.footstepSound.play()
             else:
                 if (self.keyMap["run"] != 0 and self.isWalking):
                     self.eve.loop("run" )
                     self.isRunning = True
                     self.isWalking = False
+                    self.footstepSound.setPlayRate(1.3)
+
                 elif (self.keyMap["run"] == 0 and self.isRunning):
                     self.eve.loop("walk")
                     self.eve.setPlayRate(2.0, "walk")
                     self.isWalking = True
                     self.isRunning = False
+                    self.footstepSound.setPlayRate(1.0)
+                    
         else:
             if self.isMoving:
                 self.eve.stop()
                 self.eve.pose("walk",10)
                 self.isMoving = False
+                self.footstepSound.stop()
 
         # If the camera is too far from eve, move it closer.
         # If the camera is too close to eve, move it farther.
@@ -539,6 +614,14 @@ class World(DirectObject):
         self.redDragonStartPos = self.character2.getPos()
         return task.cont
 
+    def timedParticle(self, task):
+        if task.time < 1.0:
+            return task.cont
+        
+        self.p.disable()
+        self.copyPie.removeNode()
+        return task.done
+
 def ghostDragonCmp(x,y):
     if x.getIntoNode().getName() == "terrain" and y.getIntoNode().getName() != "terrain":
         return -1
@@ -547,7 +630,6 @@ def ghostDragonCmp(x,y):
     else:
         return cmp(y.getSurfacePoint(render).getZ(), x.getSurfacePoint(render).getZ())
 
-
 # Instantiate a world and start it running
 w = World()
-run()
+base.run()
