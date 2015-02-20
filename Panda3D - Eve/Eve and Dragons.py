@@ -270,8 +270,10 @@ class World(DirectObject):
         directionalLight.setDirection(Vec3(-5, -5, -5))
         directionalLight.setColor(Vec4(1, 1, 1, 1))
         directionalLight.setSpecularColor(Vec4(1, 1, 1, 1))
-        render.setLight(render.attachNewNode(ambientLight))
+        #directionalLight.setShadowCaster(True, 512, 512)
+        #render.setLight(render.attachNewNode(ambientLight))
         render.setLight(render.attachNewNode(directionalLight))
+        #render.setShaderAuto()
     
     # Records the state of the arrow keys
     def setKey(self, key, value):
