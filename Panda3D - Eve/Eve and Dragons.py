@@ -26,16 +26,61 @@ class World(DirectObject):
         # Pause all of the AI, stop model animations, cease taking inputs, except for reset
         return 0
         
-    def resetGame():
+    def resetGame(self):
         # Set everything back to its starting position and remove the game over message
+        self.caught.destroy()
+        self.pieDisplay.destroy()
+        self.pieCount = 0
+        self.pieDisplay = grabPie(self.pieCount)
+        self.keyMap = {"left":0, "right":0, "forward":0, "cam-left":0, "cam-right":0, "run":0, "reset":0}
+        eveStartPos = self.environ.find("**/start_point").getPos()
+        self.gameOver = 0
+        self.eve.setPos(eveStartPos)
+        self.eateve.setPos(eveStartPos)
+        self.pie.setPos(Vec3(-50, -30, 10))
+        self.rand.setPos(Vec3(-70, -5, eveStartPos.getZ() + 5))
+        self.rand2.setPos(Vec3(-70, -5, eveStartPos.getZ() + 10))
+        
+        # Blue Dragon
+        self.character3.loop('win')
+        self.character3.setPos(-114,11,1.9)
+        self.blueDragonSound.play()
+        
+        # Red Dragon
+        self.character2.loop('win')
+        self.character2.setPos(-108,11,.3)
+        self.redDragonStartPos = self.character2.getPos()
+        self.redDragonCollideCount = 0
+        self.redDragonSound.play()
+        
+        # Green Dragon
+        self.character.loop('win')
+        self.character.setPos(-118,21,0)
+        self.greenDragonSound.play()
+        self.dragonStartPos = self.character.getPos()
+        self.dragonCollideCount = 0
+        self.AIbehaviors.pursue(self.eateve, 1)
+        
+        self.AIbehaviorsRand.wander(10,0,47,.5)
+        
+        self.AIbehaviorsRand2.wander(10,0,47,.5)
+
+        self.AIbehaviors3.pursue(self.rand, 1)
+        
+        self.redDragonChasingEve = 0
+        self.AIbehaviors2.pursue(self.rand2, 1)
+        
+        self.isMoving = False
+        self.isRunning = False
+        self.isWalking = False
+        
+        base.camera.setPos(self.eve.getX(),self.eve.getY()+10,2)
+        self.fixPieZ()
         return 0
     
     
     def __init__(self):
         # Sound
-        # music = loader.loadMusic("sounds/Enchanted-Woods.mp3")
-        # music.setLoop(1)
-        # music.play()
         
         self.collectSoundEffect = loader.loadMusic("sounds/item_collect.mp3")
         
@@ -44,6 +89,7 @@ class World(DirectObject):
         
         audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0], base.camera)
         
+        self.musicend = loader.loadMusic("sounds/Enchanted-Woods.mp3")
     
         # Sky Box
         starTexture = loader.loadTexture("models/stars.jpg")
@@ -63,7 +109,7 @@ class World(DirectObject):
 
         self.pieCount = 0
         self.pieDisplay = grabPie(self.pieCount)
-        self.keyMap = {"left":0, "right":0, "forward":0, "cam-left":0, "cam-right":0, "run":0}
+        self.keyMap = {"left":0, "right":0, "forward":0, "cam-left":0, "cam-right":0, "run":0, "reset":0}
         base.win.setClearColor(Vec4(0,0,0,1))
         self.environ = loader.loadModel("models/world")      
         self.environ.reparentTo(render)
@@ -78,6 +124,7 @@ class World(DirectObject):
         self.gameOver = 0
         self.eve.reparentTo(render)
         self.eve.setScale(.2)
+        #self.eve.setShear(.5, .5, .5)
         self.eve.setPos(eveStartPos)
 
         self.eateve = Actor("models/eve")
@@ -86,7 +133,7 @@ class World(DirectObject):
         self.eateve.setPos(eveStartPos)
         self.eateve.hide()
         
-        self.pie = Actor("models/fruit-pie-slice")
+        self.pie = loader.loadModel("models/fruit-pie-slice")
         self.pie.reparentTo(render)
         self.pie.setScale(.5)
         self.pie.setPos(Vec3(-50, -30, 10))
@@ -106,8 +153,8 @@ class World(DirectObject):
         # print(eveStartPos)
         
         # Blue Dragon
-        self.character3=Actor()
-        self.character3.loadModel('models/nik-dragon')
+        self.character3=Actor('models/nik-dragon')
+        #self.character3.loadModel('models/nik-dragon')
         self.character3.reparentTo(render)
         self.character3.loadAnims({'win': 'models/nik-dragon'})
         self.character3.loop('win')
@@ -118,10 +165,10 @@ class World(DirectObject):
         self.character3.setColorScale(9,9,9,.3)
         self.character3.setPos(-114,11,1.9)
         
-        blueDragonSound = audio3d.loadSfx("sounds/Snoring Giant.mp3")
-        audio3d.attachSoundToObject(blueDragonSound, self.character3)
-        blueDragonSound.setLoop(True)
-        blueDragonSound.play()
+        self.blueDragonSound = audio3d.loadSfx("sounds/Snoring Giant.mp3")
+        audio3d.attachSoundToObject(self.blueDragonSound, self.character3)
+        self.blueDragonSound.setLoop(True)
+        self.blueDragonSound.play()
         
         # Red Dragon
         self.character2=Actor()
@@ -137,10 +184,10 @@ class World(DirectObject):
         self.redDragonStartPos = self.character2.getPos()
         self.redDragonCollideCount = 0
         
-        redDragonSound = audio3d.loadSfx("sounds/Velociraptor Call.mp3")
-        audio3d.attachSoundToObject(redDragonSound, self.character3)
-        redDragonSound.setLoop(True)
-        redDragonSound.play()
+        self.redDragonSound = audio3d.loadSfx("sounds/Velociraptor Call.mp3")
+        audio3d.attachSoundToObject(self.redDragonSound, self.character3)
+        self.redDragonSound.setLoop(True)
+        self.redDragonSound.play()
         
         # Green Dragon
         self.character=Actor()
@@ -151,10 +198,10 @@ class World(DirectObject):
         self.character.setScale(.1)
         self.character.setPos(-118,21,0)
         
-        greenDragonSound = audio3d.loadSfx("sounds/Raptor Call.mp3")
-        audio3d.attachSoundToObject(greenDragonSound, self.character3)
-        greenDragonSound.setLoop(True)
-        greenDragonSound.play()
+        self.greenDragonSound = audio3d.loadSfx("sounds/Raptor Call.mp3")
+        audio3d.attachSoundToObject(self.greenDragonSound, self.character3)
+        self.greenDragonSound.setLoop(True)
+        self.greenDragonSound.play()
         
         self.dragonStartPos = self.character.getPos()
         self.dragonCollideCount = 0
@@ -210,14 +257,16 @@ class World(DirectObject):
         self.accept("arrow_right", self.setKey, ["right",1])
         self.accept("arrow_up", self.setKey, ["forward",1])
         self.accept("space", self.setKey, ["run",1])
-        self.accept("space-up", self.setKey, ["run",0])
         self.accept("a", self.setKey, ["cam-left",1])
         self.accept("s", self.setKey, ["cam-right",1])
+        self.accept("r", self.setKey, ["reset",1])
         self.accept("arrow_left-up", self.setKey, ["left",0])
         self.accept("arrow_right-up", self.setKey, ["right",0])
         self.accept("arrow_up-up", self.setKey, ["forward",0])
+        self.accept("space-up", self.setKey, ["run",0])
         self.accept("a-up", self.setKey, ["cam-left",0])
         self.accept("s-up", self.setKey, ["cam-right",0])
+        self.accept("r-up", self.setKey, ["reset",0])
 
         taskMgr.add(self.move,"moveTask")
 
@@ -306,11 +355,11 @@ class World(DirectObject):
         self.cTrav.addCollider(self.camGroundColNp, self.camGroundHandler)
 
         # Shows collision rays
-        self.eveGroundColNp.show()
-        self.camGroundColNp.show()
+        #self.eveGroundColNp.show()
+        #self.camGroundColNp.show()
        
         # Shows collisions
-        self.cTrav.showCollisions(render)
+        #self.cTrav.showCollisions(render)
         
         self.fixPieZ()
         
@@ -322,7 +371,7 @@ class World(DirectObject):
         directionalLight.setColor(Vec4(1, 1, 1, 1))
         directionalLight.setSpecularColor(Vec4(1, 1, 1, 1))
         #directionalLight.setShadowCaster(True, 512, 512)
-        #render.setLight(render.attachNewNode(ambientLight))
+        render.setLight(render.attachNewNode(ambientLight))
         render.setLight(render.attachNewNode(directionalLight))
         #render.setShaderAuto()
     
@@ -343,277 +392,303 @@ class World(DirectObject):
         entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
                                      x.getSurfacePoint(render).getZ()))
         if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
-            print("lift off of ground")
             self.pie.setZ(entries[0].getSurfacePoint(render).getZ() + .5)
             return False
         else:
-            print("collision")
             return True
     
     # Accepts arrow keys to move either the player or the menu cursor,
     # Also deals with grid checking and collision detection
     def move(self, task):
-
-        if math.sqrt((self.eve.getX() - self.pie.getX())**2 + (self.eve.getY() - self.pie.getY())**2) < .6:
-            # particle effect
-            self.p = ParticleEffect()
-            self.p.loadConfig("models/sparkleparticlerenderer.ptf")
-            
-            self.copyPie = self.pie.copyTo(render)
-            self.copyPie.setColor(0.0, 0.0, 0.0, 0.0)
-            
-            self.p.start(parent = self.copyPie, renderParent = render)
-            taskMgr.add(self.timedParticle, "timedParticle")
-            
-            # play collect sounds
-            self.collectSoundEffect.play()
-            
-            # collect pie
-            try:
-                self.pie.setPos(Vec3(random.randrange(-120,-19), random.randrange(-60,51), 10))
-                while self.fixPieZ():
+        if (self.gameOver != 1):
+            if math.sqrt((self.eve.getX() - self.pie.getX())**2 + (self.eve.getY() - self.pie.getY())**2) < .6:
+                # particle effect
+                self.p = ParticleEffect()
+                self.p.loadConfig("models/sparkleparticlerenderer.ptf")
+                
+                self.copyPie = self.pie.copyTo(render)
+                self.copyPie.setColor(0.0, 0.0, 0.0, 0.0)
+                
+                self.p.start(parent = self.copyPie, renderParent = render)
+                taskMgr.add(self.timedParticle, "timedParticle")
+                
+                # play collect sounds
+                self.collectSoundEffect.play()
+                
+                # collect pie
+                try:
                     self.pie.setPos(Vec3(random.randrange(-120,-19), random.randrange(-60,51), 10))
-            except Exception as ex:
-                print ex
-                raw_input()
-            self.pieDisplay.clearText()
-            self.pieCount = self.pieCount + 1
-            self.pieDisplay = grabPie(self.pieCount)
-            
-            
-        if math.sqrt((self.eve.getX() - self.character.getX())**2 + (self.eve.getY() - self.character.getY())**2) < 1 and self.gameOver == 0:
-            self.caught = displayGameOver()
-            self.gameOver = 1
-
-        if math.sqrt((self.eve.getX() - self.character2.getX())**2 + (self.eve.getY() - self.character2.getY())**2) < 1 and self.gameOver == 0:
-            self.caught = displayGameOver()
-            self.gameOver = 1
-            
-        if math.sqrt((self.eve.getX() - self.character3.getX())**2 + (self.eve.getY() - self.character3.getY())**2) < 1.3 and self.gameOver == 0:
-            self.caught = displayGameOver()
-            self.gameOver = 1
-
-        if math.sqrt((self.eve.getX() - self.character2.getX())**2 + (self.eve.getY() - self.character2.getY())**2) < 12.5 and self.redDragonCollideCount == 0 and self.redDragonChasingEve == 0:
-            self.redDragonChasingEve = 1
-            self.AIbehaviors2.removeAi("pursue")
-            self.AIbehaviors2.pauseAi("seek")
-            self.AIbehaviors2.pursue(self.eve, 1)
-            
-        # If the camera-left key is pressed, move camera left.
-        # If the camera-right key is pressed, move camera right.
-        base.camera.lookAt(self.eve)
-        if (self.keyMap["cam-left"]!=0):
-            base.camera.setX(base.camera, -20 * globalClock.getDt())
-        if (self.keyMap["cam-right"]!=0):
-            base.camera.setX(base.camera, +20 * globalClock.getDt())
-
-        self.pie.setH(self.pie.getH() + 100 * globalClock.getDt())
-
-        # save eve's initial position so that we can restore it,
-        # in case she falls off the map or runs into something.
-        startpos = self.eve.getPos()
-        # If a move-key is pressed, move eve in the specified direction.
-        if (self.keyMap["left"]!=0):
-            self.eve.setH(self.eve.getH() + 300 * globalClock.getDt())
-        if (self.keyMap["right"]!=0):
-            self.eve.setH(self.eve.getH() - 300 * globalClock.getDt())
-        if (self.keyMap["forward"]!=0):
-            if (self.keyMap["run"] != 0):
-                self.eve.setY(self.eve, -30 * globalClock.getDt())
-            else:
-                self.eve.setY(self.eve, -10 * globalClock.getDt())
-            
-        # If eve is moving, loop the run animation.
-        # If she is standing still, stop the animation.
-        if (self.keyMap["forward"]!=0) or (self.keyMap["left"]!=0) or (self.keyMap["right"]!=0):
-            if self.isMoving is False:
-                if (self.keyMap["run"] != 0):
-                    self.eve.loop("run")
-                    self.isMoving = True
-                    self.isRunning = True
-                    self.isWalking = False
-                    self.footstepSound.setPlayRate(1.3)
-                    self.footstepSound.play()
-
-                else:
-                    self.eve.loop("walk")
-                    self.eve.setPlayRate(2.0, "walk")
-                    self.isMoving = True
-                    self.isWalking = True
-                    self.isRunning = False
-                    self.footstepSound.setPlayRate(1.0)
-                    self.footstepSound.play()
-            else:
-                if (self.keyMap["run"] != 0 and self.isWalking):
-                    self.eve.loop("run" )
-                    self.isRunning = True
-                    self.isWalking = False
-                    self.footstepSound.setPlayRate(1.3)
-
-                elif (self.keyMap["run"] == 0 and self.isRunning):
-                    self.eve.loop("walk")
-                    self.eve.setPlayRate(2.0, "walk")
-                    self.isWalking = True
-                    self.isRunning = False
-                    self.footstepSound.setPlayRate(1.0)
-                    
-        else:
-            if self.isMoving:
-                self.eve.stop()
-                self.eve.pose("walk",10)
-                self.isMoving = False
-                self.footstepSound.stop()
-
-        # If the camera is too far from eve, move it closer.
-        # If the camera is too close to eve, move it farther.
-        camvec = self.eve.getPos() - base.camera.getPos()
-        camvec.setZ(0)
-        camdist = camvec.length()
-        camvec.normalize()
-        if (camdist > 10.0):
-            base.camera.setPos(base.camera.getPos() + camvec*(camdist-10))
-            camdist = 10.0
-        if (camdist < 5.0):
-            base.camera.setPos(base.camera.getPos() - camvec*(5-camdist))
-            camdist = 5.0
-
-        # Now check for collisions.
-        self.cTrav.traverse(render)
-
-        # Adjust eve's Z coordinate. If eve's ray hit terrain,s
-        # update her Z. If it hit anything else, or didn't hit anything, put
-        # her back where she was last frame.
-        entries = []
-        for i in range(self.eveGroundHandler.getNumEntries()):
-            entry = self.eveGroundHandler.getEntry(i)
-            entries.append(entry)
-        entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
-                                     x.getSurfacePoint(render).getZ()))
-        if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
-            self.eve.setZ(entries[0].getSurfacePoint(render).getZ())
-        else:
-            self.eve.setPos(startpos)
-            
-            
-
-        
-        # Adjust the dragon's Z coordinate like with eve. Additionally, if
-        # the dragon has hit an object, have it seek a location behind it
-        # temporarily.
-        if self.dragonCollideCount == 0:
-            self.AIbehaviors.resumeAi("pursue")
-            self.AIbehaviors.pauseAi("seek")
-        else:
-            self.dragonCollideCount = self.dragonCollideCount - 1
-        
-        entries = []
-        for i in range(self.dragonGroundHandler.getNumEntries()):
-            entry = self.dragonGroundHandler.getEntry(i)
-            entries.append(entry)
-        entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
-                                     x.getSurfacePoint(render).getZ()))
-        if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
-            self.character.setZ(entries[0].getSurfacePoint(render).getZ() + 1)
-        elif (self.dragonCollideCount == 0):
-            try:
-                self.AIbehaviors.pauseAi("pursue")
-            except Exception as ex:
-                print ex
-                raw_input()
-            self.AIbehaviors.seek(Vec3(self.character.getX() + 2000*(-self.character.getX() + self.dragonStartPos.getX()), self.character.getY() + 2000*(-self.character.getY() + self.dragonStartPos.getY()), self.character.getZ() + 2000*(-self.character.getZ() + self.dragonStartPos.getZ())), 20000)
-            #self.AIbehaviors.seek(self.character3)
-            self.dragonCollideCount = 100
-            #self.AIbehaviors.flee(self.character.getPos(), 1, 10, 10000)
-            #self.character.setPos(dragonStartPos)
-        else:
-            #do nothing
-            self.dragonCollideCount = self.dragonCollideCount
-        
-        if self.redDragonCollideCount == 0 and self.redDragonChasingEve == 0:
-            self.AIbehaviors2.pursue(self.rand2, 1)
-            self.AIbehaviors2.pauseAi("seek")
-        elif self.redDragonChasingEve == 0:
-            self.redDragonCollideCount = self.redDragonCollideCount - 1
-        
-        # Red dragon z correcting and collision detecting
-        entries = []
-        for i in range(self.redDragonGroundHandler.getNumEntries()):
-            entry = self.redDragonGroundHandler.getEntry(i)
-            entries.append(entry)
-        entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
-                                     x.getSurfacePoint(render).getZ()))
-        if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
-            self.character2.setZ(entries[0].getSurfacePoint(render).getZ() + .6)
-        elif (self.redDragonCollideCount == 0):
-            try:
+                    while self.fixPieZ():
+                        self.pie.setPos(Vec3(random.randrange(-120,-19), random.randrange(-60,51), 10))
+                except Exception as ex:
+                    print ex
+                    raw_input()
+                self.pieDisplay.clearText()
+                self.pieCount = self.pieCount + 1
+                self.pieDisplay = grabPie(self.pieCount)
+                
+                
+            if math.sqrt((self.eve.getX() - self.character.getX())**2 + (self.eve.getY() - self.character.getY())**2) < 1 and self.gameOver == 0:
+                self.caught = displayGameOver()
+                self.gameOver = 1
+    
+            if math.sqrt((self.eve.getX() - self.character2.getX())**2 + (self.eve.getY() - self.character2.getY())**2) < 1 and self.gameOver == 0:
+                self.caught = displayGameOver()
+                self.gameOver = 1
+                
+            if math.sqrt((self.eve.getX() - self.character3.getX())**2 + (self.eve.getY() - self.character3.getY())**2) < 1.3 and self.gameOver == 0:
+                self.caught = displayGameOver()
+                self.gameOver = 1
+    
+            if math.sqrt((self.eve.getX() - self.character2.getX())**2 + (self.eve.getY() - self.character2.getY())**2) < 12.5 and self.redDragonCollideCount == 0 and self.redDragonChasingEve == 0:
+                self.redDragonChasingEve = 1
                 self.AIbehaviors2.removeAi("pursue")
-            except Exception as ex:
-                print ex
-                raw_input()
-            self.redDragonChasingEve = 0
-            self.AIbehaviors2.seek(Vec3(self.character2.getX() + 2000*(-self.character2.getX() + self.redDragonStartPos.getX()), self.character2.getY() + 2000*(-self.character2.getY() + self.redDragonStartPos.getY()), self.character2.getZ() + 2000*(-self.character2.getZ() + self.redDragonStartPos.getZ())), 20000)
-            #self.AIbehaviors.seek(self.character3)
-            self.redDragonCollideCount = 100
-            #self.AIbehaviors.flee(self.character.getPos(), 1, 10, 10000)
-            #self.character.setPos(dragonStartPos)
+                self.AIbehaviors2.pauseAi("seek")
+                self.AIbehaviors2.pursue(self.eve, 1)
+                
+            # If the camera-left key is pressed, move camera left.
+            # If the camera-right key is pressed, move camera right.
+            base.camera.lookAt(self.eve)
+            if (self.keyMap["cam-left"]!=0):
+                base.camera.setX(base.camera, -20 * globalClock.getDt())
+            if (self.keyMap["cam-right"]!=0):
+                base.camera.setX(base.camera, +20 * globalClock.getDt())
+    
+            self.pie.setH(self.pie.getH() + 100 * globalClock.getDt())
+    
+            # save eve's initial position so that we can restore it,
+            # in case she falls off the map or runs into something.
+            startpos = self.eve.getPos()
+            # If a move-key is pressed, move eve in the specified direction.
+            if (self.keyMap["left"]!=0):
+                self.eve.setH(self.eve.getH() + 300 * globalClock.getDt())
+            if (self.keyMap["right"]!=0):
+                self.eve.setH(self.eve.getH() - 300 * globalClock.getDt())
+            if (self.keyMap["forward"]!=0):
+                if (self.keyMap["run"] != 0):
+                    self.eve.setY(self.eve, -30 * globalClock.getDt())
+                else:
+                    self.eve.setY(self.eve, -10 * globalClock.getDt())
+                
+            # If eve is moving, loop the run animation.
+            # If she is standing still, stop the animation.
+            if (self.keyMap["forward"]!=0) or (self.keyMap["left"]!=0) or (self.keyMap["right"]!=0):
+                if self.isMoving is False:
+                    if (self.keyMap["run"] != 0):
+                        self.eve.loop("run")
+                        self.isMoving = True
+                        self.isRunning = True
+                        self.isWalking = False
+                        self.footstepSound.setPlayRate(1.3)
+                        self.footstepSound.play()
+    
+                    else:
+                        self.eve.loop("walk")
+                        self.eve.setPlayRate(2.0, "walk")
+                        self.isMoving = True
+                        self.isWalking = True
+                        self.isRunning = False
+                        self.footstepSound.setPlayRate(1.0)
+                        self.footstepSound.play()
+                else:
+                    if (self.keyMap["run"] != 0 and self.isWalking):
+                        self.eve.loop("run" )
+                        self.isRunning = True
+                        self.isWalking = False
+                        self.footstepSound.setPlayRate(1.3)
+    
+                    elif (self.keyMap["run"] == 0 and self.isRunning):
+                        self.eve.loop("walk")
+                        self.eve.setPlayRate(2.0, "walk")
+                        self.isWalking = True
+                        self.isRunning = False
+                        self.footstepSound.setPlayRate(1.0)
+                        
+            else:
+                if self.isMoving:
+                    self.eve.stop()
+                    self.eve.pose("walk",10)
+                    self.isMoving = False
+                    self.footstepSound.stop()
+    
+            # If the camera is too far from eve, move it closer.
+            # If the camera is too close to eve, move it farther.
+            camvec = self.eve.getPos() - base.camera.getPos()
+            camvec.setZ(0)
+            camdist = camvec.length()
+            camvec.normalize()
+            if (camdist > 10.0):
+                base.camera.setPos(base.camera.getPos() + camvec*(camdist-10))
+                camdist = 10.0
+            if (camdist < 5.0):
+                base.camera.setPos(base.camera.getPos() - camvec*(5-camdist))
+                camdist = 5.0
+    
+            # Now check for collisions.
+            self.cTrav.traverse(render)
+    
+            # Adjust eve's Z coordinate. If eve's ray hit terrain,s
+            # update her Z. If it hit anything else, or didn't hit anything, put
+            # her back where she was last frame.
+            entries = []
+            for i in range(self.eveGroundHandler.getNumEntries()):
+                entry = self.eveGroundHandler.getEntry(i)
+                entries.append(entry)
+            entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
+                                        x.getSurfacePoint(render).getZ()))
+            if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
+                self.eve.setZ(entries[0].getSurfacePoint(render).getZ())
+            else:
+                self.eve.setPos(startpos)
+                
+                
+    
+            
+            # Adjust the dragon's Z coordinate like with eve. Additionally, if
+            # the dragon has hit an object, have it seek a location behind it
+            # temporarily.
+            if self.dragonCollideCount == 0:
+                self.AIbehaviors.resumeAi("pursue")
+                self.AIbehaviors.pauseAi("seek")
+            else:
+                self.dragonCollideCount = self.dragonCollideCount - 1
+            
+            entries = []
+            for i in range(self.dragonGroundHandler.getNumEntries()):
+                entry = self.dragonGroundHandler.getEntry(i)
+                entries.append(entry)
+            entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
+                                        x.getSurfacePoint(render).getZ()))
+            if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
+                self.character.setZ(entries[0].getSurfacePoint(render).getZ() + 1)
+            elif (self.dragonCollideCount == 0):
+                try:
+                    self.AIbehaviors.pauseAi("pursue")
+                except Exception as ex:
+                    print ex
+                    raw_input()
+                self.AIbehaviors.seek(Vec3(self.character.getX() + 2000*(-self.character.getX() + self.dragonStartPos.getX()), self.character.getY() + 2000*(-self.character.getY() + self.dragonStartPos.getY()), self.character.getZ() + 2000*(-self.character.getZ() + self.dragonStartPos.getZ())), 20000)
+                #self.AIbehaviors.seek(self.character3)
+                self.dragonCollideCount = 100
+                #self.AIbehaviors.flee(self.character.getPos(), 1, 10, 10000)
+                #self.character.setPos(dragonStartPos)
+            else:
+                #do nothing
+                self.dragonCollideCount = self.dragonCollideCount
+            
+            if self.redDragonCollideCount == 0 and self.redDragonChasingEve == 0:
+                self.AIbehaviors2.pursue(self.rand2, 1)
+                self.AIbehaviors2.pauseAi("seek")
+            elif self.redDragonChasingEve == 0:
+                self.redDragonCollideCount = self.redDragonCollideCount - 1
+            
+            # Red dragon z correcting and collision detecting
+            entries = []
+            for i in range(self.redDragonGroundHandler.getNumEntries()):
+                entry = self.redDragonGroundHandler.getEntry(i)
+                entries.append(entry)
+            entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
+                                        x.getSurfacePoint(render).getZ()))
+            if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
+                self.character2.setZ(entries[0].getSurfacePoint(render).getZ() + .6)
+            elif (self.redDragonCollideCount == 0):
+                try:
+                    self.AIbehaviors2.removeAi("pursue")
+                except Exception as ex:
+                    print ex
+                    raw_input()
+                self.redDragonChasingEve = 0
+                self.AIbehaviors2.seek(Vec3(self.character2.getX() + 2000*(-self.character2.getX() + self.redDragonStartPos.getX()), self.character2.getY() + 2000*(-self.character2.getY() + self.redDragonStartPos.getY()), self.character2.getZ() + 2000*(-self.character2.getZ() + self.redDragonStartPos.getZ())), 20000)
+                #self.AIbehaviors.seek(self.character3)
+                self.redDragonCollideCount = 100
+                #self.AIbehaviors.flee(self.character.getPos(), 1, 10, 10000)
+                #self.character.setPos(dragonStartPos)
+            else:
+                #do nothing
+                self.redDragonCollideCount = self.redDragonCollideCount
+            
+            # Adjust the ghost dragon's Z coordinate like with eve.
+            # Additionally, if the ghost dragon has hit an object, have it
+            # seek a location behind it temporarily.
+            #if self.ghostDragonCollideCount == 0:
+            #    self.AIbehaviors.resumeAi("wander")
+            #    self.AIbehaviors3.pauseAi("seek")
+            #else:
+            #    self.ghostDragonCollideCount = self.dragonCollideCount - 1
+            
+            entries = []
+            for i in range(self.ghostDragonGroundHandler.getNumEntries()):
+                entry = self.ghostDragonGroundHandler.getEntry(i)
+                entries.append(entry)
+            entries.sort(lambda x,y: ghostDragonCmp(x,y))
+            
+            if (len(entries)>0):
+                self.character3.setZ(entries[0].getSurfacePoint(render).getZ() + 2.5)
+            #elif (self.ghostDragonCollideCount == 0):
+            #    self.AIbehaviors3.pauseAi("wander")
+            #    self.AIbehaviors3.seek(Vec3(self.character.getX() + 2000*(-self.character.getX() + self.dragonStartPos.getX()), self.character.getY() + 2000*(-self.character.getY() + self.dragonStartPos.getY()), self.character.getZ() + 2000*(-self.character.getZ() + self.dragonStartPos.getZ())), 20000)
+                #self.AIbehaviors.seek(self.character3)
+            #    self.ghostDragonCollideCount = 100
+                #self.AIbehaviors.flee(self.character.getPos(), 1, 10, 10000)
+                #self.character.setPos(dragonStartPos)
+            #else:
+                #do nothing
+            #   self.ghostDragonCollideCount = self.ghostDragonCollideCount
+                
+            # Keep the camera at one foot above the terrain,
+            # or two feet above eve, whichever is greater.
+            entries = []
+            for i in range(self.camGroundHandler.getNumEntries()):
+                entry = self.camGroundHandler.getEntry(i)
+                entries.append(entry)
+            entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
+                                        x.getSurfacePoint(render).getZ()))
+            if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
+                base.camera.setZ(entries[0].getSurfacePoint(render).getZ()+1.0)
+            if (base.camera.getZ() < self.eve.getZ() + 2.0):
+                base.camera.setZ(self.eve.getZ() + 2.0)
+                
+            # The camera should look in eve's direction,
+            # but it should also try to stay horizontal, so look at
+            # a floater which hovers above eve's head.
+            self.floater.setPos(self.eve.getPos())
+            self.floater.setZ(self.eve.getZ() + 2.0)
+            base.camera.lookAt(self.floater)
+    
+    
+            self.eateve.setPos(self.eve.getX(), self.eve.getY(), self.eve.getZ() + 1)
+            self.dragonStartPos = self.character.getPos()
+            self.redDragonStartPos = self.character2.getPos()
+            return task.cont
         else:
-            #do nothing
-            self.redDragonCollideCount = self.redDragonCollideCount
-        
-        # Adjust the ghost dragon's Z coordinate like with eve.
-        # Additionally, if the ghost dragon has hit an object, have it
-        # seek a location behind it temporarily.
-        #if self.ghostDragonCollideCount == 0:
-        #    self.AIbehaviors.resumeAi("wander")
-        #    self.AIbehaviors3.pauseAi("seek")
-        #else:
-        #    self.ghostDragonCollideCount = self.dragonCollideCount - 1
-        
-        entries = []
-        for i in range(self.ghostDragonGroundHandler.getNumEntries()):
-            entry = self.ghostDragonGroundHandler.getEntry(i)
-            entries.append(entry)
-        entries.sort(lambda x,y: ghostDragonCmp(x,y))
-        
-        if (len(entries)>0):
-            self.character3.setZ(entries[0].getSurfacePoint(render).getZ() + 2.5)
-        #elif (self.ghostDragonCollideCount == 0):
-        #    self.AIbehaviors3.pauseAi("wander")
-        #    self.AIbehaviors3.seek(Vec3(self.character.getX() + 2000*(-self.character.getX() + self.dragonStartPos.getX()), self.character.getY() + 2000*(-self.character.getY() + self.dragonStartPos.getY()), self.character.getZ() + 2000*(-self.character.getZ() + self.dragonStartPos.getZ())), 20000)
-            #self.AIbehaviors.seek(self.character3)
-        #    self.ghostDragonCollideCount = 100
-            #self.AIbehaviors.flee(self.character.getPos(), 1, 10, 10000)
-            #self.character.setPos(dragonStartPos)
-        #else:
-            #do nothing
-         #   self.ghostDragonCollideCount = self.ghostDragonCollideCount
+            self.eve.stop()
+            self.isMoving = False
+            self.footstepSound.stop()
+            self.character.stop()
+            self.AIbehaviors.pauseAi("wander")
+            self.AIbehaviors.pauseAi("seek")
+            self.AIbehaviors.pauseAi("pursue")
+            self.character2.stop()
+            self.AIbehaviors2.pauseAi("wander")
+            self.AIbehaviors2.pauseAi("seek")
+            self.AIbehaviors2.pauseAi("pursue")
+            self.character3.stop()
+            self.AIbehaviors3.pauseAi("wander")
+            self.AIbehaviors3.pauseAi("seek")
+            self.AIbehaviors3.pauseAi("pursue")
+            self.greenDragonSound.stop()
+            self.redDragonSound.stop()
+            self.blueDragonSound.stop()
+            if self.musicend.status() != self.musicend.PLAYING:
+                self.musicend.setLoop(1)
+                self.musicend.play()
+            if (self.keyMap["reset"] == 1):
+                self.gameOver = 0
+                self.musicend.stop()
+                self.resetGame()
+                # Fill in all of the things
+            return task.cont
             
-        # Keep the camera at one foot above the terrain,
-        # or two feet above eve, whichever is greater.
-        entries = []
-        for i in range(self.camGroundHandler.getNumEntries()):
-            entry = self.camGroundHandler.getEntry(i)
-            entries.append(entry)
-        entries.sort(lambda x,y: cmp(y.getSurfacePoint(render).getZ(),
-                                     x.getSurfacePoint(render).getZ()))
-        if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
-            base.camera.setZ(entries[0].getSurfacePoint(render).getZ()+1.0)
-        if (base.camera.getZ() < self.eve.getZ() + 2.0):
-            base.camera.setZ(self.eve.getZ() + 2.0)
-            
-        # The camera should look in eve's direction,
-        # but it should also try to stay horizontal, so look at
-        # a floater which hovers above eve's head.
-        self.floater.setPos(self.eve.getPos())
-        self.floater.setZ(self.eve.getZ() + 2.0)
-        base.camera.lookAt(self.floater)
-
-
-        self.eateve.setPos(self.eve.getX(), self.eve.getY(), self.eve.getZ() + 1)
-        self.dragonStartPos = self.character.getPos()
-        self.redDragonStartPos = self.character2.getPos()
-        return task.cont
-
     def timedParticle(self, task):
         if task.time < 1.0:
             return task.cont
